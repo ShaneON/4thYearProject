@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">CycLED</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="maps_page">Maps Page</string>
+</resources>

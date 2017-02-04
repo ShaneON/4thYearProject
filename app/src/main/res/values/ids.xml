@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="goToMapsScreenButton" type="id">goToMapsScreenButton</item>
+    <item name="searchBluetoothButton" type="id">searchBluetoothButton</item>
+    <item name="latitude_text_view" type="id">latitude_text_view</item>
+    <item name="longitude_text_view" type="id">longitude_text_view</item>
+    <item name="last_update_time_text_view" type="id">last_update_time_text_view</item>
+</resources>
