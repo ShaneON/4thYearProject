@@ -15,3 +15,13 @@ I have completed the task of connecting my app to the flora board via the Bluefr
 I will now begin the task of integrating the google maps API with my app, and also gps location functionality, so that my app can find a person's location
 and plan out their routes which the direction system will guide them along.
 
+## My Third Blog Entry
+
+I now have the Google Maps API up and running, and also real time GPS updates. I can see my position change when I move on my app's map screen.
+Now I need to programme the route planning functionality, where the user will select a destination and the app will either choose a route for the user, 
+or the user can draw in their own route. I am not sure yet how I will go about implementing the route drawing functionality, as the phone screen is quite 
+small it could be tricky to come up with a way that works without too much hassle for the user. 
+As for the automatic route selection, I think most likely the shortest possible route will be the one selected, although I might give some consideration
+to incorporating external sources of information, such as traffic etc. if I have time, but that is just an idea at the moment.
+
+
