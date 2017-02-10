@@ -52,8 +52,10 @@ class BluetoothLE {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             super.onConnectionStateChange(gatt, status, newState);
+
             if (newState == BluetoothGatt.STATE_CONNECTED) {
                 mainActivity.writeLine("Connected.");
+
                 // Discover services.
                 if (!gatt.discoverServices()) {
                     mainActivity.writeLine("Failed to connect.");

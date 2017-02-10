@@ -6,7 +6,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.os.ResultReceiver;
+import android.os.ResultReceiver;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -15,10 +15,6 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
-
-/**
- * Created by hp on 08/02/2017.
- */
 
 public class GPSIntentService extends IntentService implements GoogleApiClient.ConnectionCallbacks,
         LocationListener, GoogleApiClient.OnConnectionFailedListener {
@@ -41,8 +37,7 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        Log.d(TAG, "--------------------------------------------inside onHandleIntent---------------------------------------------");
-        resultReceiver = intent.getParcelableExtra("receiver");
+        resultReceiver = intent.getParcelableExtra("resultReceiver");
         createLocationRequest();
         //Create an instance of GoogleAPIClient.
         if (googleApiClient == null) {
@@ -52,10 +47,11 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
                     .addApi(LocationServices.API)
                     .build();
         }
+        googleApiClient.connect();
     }
 
     protected void createLocationRequest() {
-        Log.d(TAG, "inside createLocationRequest");
+        Log.d(TAG, "-----------------------------------------inside createLocationRequest-----------------------------------------------");
         locationRequest = new LocationRequest();
         locationRequest.setInterval(5000);
         locationRequest.setFastestInterval(3000);
@@ -78,7 +74,7 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
 
     @Override
     public void onConnected(Bundle connectionHint) {
-        Log.d(TAG, "inside onConnected");
+        Log.d(TAG, "------------------------------inside onConnected-----------------------------------------------------");
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
                 android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -107,7 +103,7 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.d(TAG, "inside onLocationChanged");
+        Log.d(TAG, "------------------------------------------------inside onLocationChanged-------------------------------------------");
         currentLocation = location;
         currentLatLng = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
         String bundleLatitude = Double.toString(currentLocation.getLatitude());
@@ -123,8 +119,6 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
         // An unresolvable error has occurred and a connection to Google APIs
         // could not be established. Display an error message, or handle
         // the failure silently
-
-        // ...
     }
 /*
     @Override

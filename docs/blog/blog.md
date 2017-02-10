@@ -24,4 +24,12 @@ small it could be tricky to come up with a way that works without too much hassl
 As for the automatic route selection, I think most likely the shortest possible route will be the one selected, although I might give some consideration
 to incorporating external sources of information, such as traffic etc. if I have time, but that is just an idea at the moment.
 
+## My Fourth Blog Entry
+
+I ran into an issue while I was getting ready to set up the directions element of my app. I have realised that the bluetooth, gps and directions need to be background services 
+in the app rather than activities, because the app needs to be on and communicating with the Flora board even when the phone is locked. So my next task is to move my gps and bluetooth code 
+to their own IntentService classes and then make a new directions Service. I have made good progress on the gps and bluetooth services, but still have more things to fix 
+before they are properly functional.
+I also added a bluetooth button that changes colour depending on if its connected to a device or not. 
+
 
