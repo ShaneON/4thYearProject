@@ -32,4 +32,8 @@ to their own IntentService classes and then make a new directions Service. I hav
 before they are properly functional.
 I also added a bluetooth button that changes colour depending on if its connected to a device or not. 
 
+## My Fifth Blog Entry
+I have my directions background service connecting to the google directions web service, it returns a JSON file which I will need to parse to extract the information from.
+So that is my next task. 
+
 

@@ -17,6 +17,18 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    sourceSets {
+        main {
+            java {
+                exclude '**/BluetoothLE.java'
+            }
+        }
+        androidTest {
+            java {
+                exclude '**/TestBluetoothLE.java'
+            }
+        }
+    }
 }
 
 dependencies {

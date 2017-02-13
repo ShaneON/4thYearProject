@@ -12,14 +12,13 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.ParcelUuid;
 import android.os.ResultReceiver;
 import android.util.Log;
-
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.UUID;
-
 
 public class BluetoothLeIntentService extends IntentService {
 
@@ -37,6 +36,9 @@ public class BluetoothLeIntentService extends IntentService {
     private BluetoothGattCharacteristic tx;
     private BluetoothGattCharacteristic rx;
     ResultReceiver resultReceiver;
+    private Handler handler;
+    private boolean scanning;
+    private final int SCAN_TIME = 10000;
 
     public BluetoothLeIntentService() {
         super("BluetoothLeIntentService");
@@ -55,6 +57,19 @@ public class BluetoothLeIntentService extends IntentService {
 
     void scanForDevices() {
         final BluetoothLeScanner bluetoothLeScanner = adapter.getBluetoothLeScanner();
+        final Bundle bluetoothBundle = new Bundle();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+
+                scanning = false;
+                bluetoothLeScanner.stopScan(leScanCallback);
+                bluetoothBundle.putString("No device", "No device detected, please turn on bluetooth device.");
+                resultReceiver.send(0, bluetoothBundle);
+            }
+        }, SCAN_TIME);
+        bluetoothBundle.putString("Scanning", "Scanning for devices...");
+        scanning = true;
         bluetoothLeScanner.startScan(leScanCallback);
     }
 
@@ -80,6 +95,7 @@ public class BluetoothLeIntentService extends IntentService {
                 Log.d(TAG, "Disconnected");
                 bluetoothBundle.putString("Disconnected", "Disconnected");
                 resultReceiver.send(0, bluetoothBundle);
+                scanForDevices();
             } else {
                 Log.d(TAG, "New State: " + newState);
             }
@@ -137,15 +153,13 @@ public class BluetoothLeIntentService extends IntentService {
                 for (ParcelUuid u : parcelUuidList) {
                     if (UART_UUID.toString().equals(u.getUuid().toString())) {
                         bluetoothLeScanner.stopScan(leScanCallback);
-                       // mainActivity.writeLine("Found UART service!");
                         // Connect to the device.
                         // Control flow will now go to the callback functions when BTLE events occur.
                         gatt = result.getDevice().connectGatt(getApplication(), false, callback);
                     }
                 }
             }
-
-            else {}//mainActivity.writeLine("No UUIDs found for device.");
+            else {Log.d(TAG, "No UUIDs found for device.");}
 
         }
         @Override

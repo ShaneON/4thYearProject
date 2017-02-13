@@ -12,11 +12,9 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
-
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Status;
@@ -30,13 +28,11 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
-
-import static android.content.ContentValues.TAG;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback,
         GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks{
 
-    private BluetoothLE ble;
     private GoogleMap mMap;
     GoogleApiClient googleApiClient;
     private Marker marker;
@@ -85,39 +81,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             .findFragmentById(R.id.map);
                     mapFragment.getMapAsync(this);
 
-                    PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
-                            getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-                    autocompleteFragment.setText("Where do you want to go?");
-                    autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-                        @Override
-                        public void onPlaceSelected(Place place) {
-                            destinationLatLng = place.getLatLng();
-                            //Log.i(TAG, "Place: " + place.getName());
-                        }
-
-                        @Override
-                        public void onError(Status status) {
-                            // TODO: Handle the error.
-                            //Log.i(TAG, "An error occurred: " + status);
-                        }
-                    });
-
-                    //Create an instance of GoogleAPIClient.
-                    if (googleApiClient == null) {
-                        googleApiClient = new GoogleApiClient.Builder(this)
-                                .addConnectionCallbacks(this)
-                                .addOnConnectionFailedListener(this)
-                                .addApi(Places.PLACE_DETECTION_API)
-                                .addApi(Places.GEO_DATA_API)
-                                .build();
-                    }
-                    googleApiClient.connect();
-                    Log.d(TAG, "=========================GoogleApiClient has connected=================================");
-
-                    MapsResultReceiver mapsResultReceiver = new MapsResultReceiver(null, this);
-                    Intent gpsIntentService = new Intent(this, GPSIntentService.class);
-                    gpsIntentService.putExtra("resultReceiver", mapsResultReceiver);
-                    startService(gpsIntentService);
+                    directionsSetup();
+                    googleApiClientSetup();
+                    mapsServiceStartup();
 
                 } else {
                     final AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -134,6 +100,59 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 return;
             }
         }
+    }
+
+    private void mapsServiceStartup() {
+        MapsResultReceiver mapsResultReceiver = new MapsResultReceiver(null, this);
+        Intent gpsIntentService = new Intent(this, GPSIntentService.class);
+        gpsIntentService.putExtra("resultReceiver", mapsResultReceiver);
+        startService(gpsIntentService);
+    }
+
+    private void googleApiClientSetup() {
+        //Create an instance of GoogleAPIClient.
+        if (googleApiClient == null) {
+            googleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(Places.PLACE_DETECTION_API)
+                    .addApi(Places.GEO_DATA_API)
+                    .build();
+        }
+        googleApiClient.connect();
+
+    }
+
+    private void directionsSetup() {
+
+        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                destinationLatLng = place.getLatLng();
+                addDestinationMarker();
+                directionsServiceStartup();
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+                //Log.i(TAG, "An error occurred: " + status);
+            }
+        });
+    }
+
+    private void directionsServiceStartup() {
+        DirectionsResultReceiver directionsResultReceiver = new DirectionsResultReceiver(null, this);
+        Intent directionsIntentService = new Intent(this, DirectionsIntentService.class);
+        directionsIntentService.putExtra("resultReceiver", directionsResultReceiver);
+        startService(directionsIntentService);
+    }
+
+    private void addDestinationMarker() {
+        MarkerOptions markerOptions = new MarkerOptions().position(destinationLatLng);
+        marker = mMap.addMarker(markerOptions);
     }
 
     @Override
@@ -169,23 +188,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(null != marker) marker.remove();
     }
 
-    void updateUI() {
-
-    }
-
     void onReceiveGPSUpdate(String la, String lo) {
 
         double latitude = Double.parseDouble(la);
         double longitude = Double.parseDouble(lo);
         currentLatLng = new LatLng(latitude, longitude);
         if(firstUpdate) {
-            //MarkerOptions markerOptions = new MarkerOptions().position(currentLatLng);
-            //markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
-            //marker = mMap.addMarker(markerOptions);
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 12.0f));
             firstUpdate = false;
         }
-        else updateUI();
     }
 
     protected void onStart() {
@@ -198,7 +209,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onStop();
     }
 */
-
     protected void onDestroy()
     {
         googleApiClient.disconnect();
@@ -207,7 +217,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
@@ -221,13 +230,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         int id = item.getItemId();
         if (id == R.id.bluetooth_search) {
             bluetoothItem = item;
-            BluetoothResultReceiver bluetoothResultReceiver = new BluetoothResultReceiver(null, this);
-            Intent bluetoothLeIntentService = new Intent(this, BluetoothLeIntentService.class);
-            bluetoothLeIntentService.putExtra("resultReceiver", bluetoothResultReceiver);
-            startService(bluetoothLeIntentService);
-            // TODO set up icons for searching and connected
+            bluetoothServiceStartup();
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void bluetoothServiceStartup() {
+        BluetoothResultReceiver bluetoothResultReceiver = new BluetoothResultReceiver(null, this);
+        Intent bluetoothLeIntentService = new Intent(this, BluetoothLeIntentService.class);
+        bluetoothLeIntentService.putExtra("resultReceiver", bluetoothResultReceiver);
+        startService(bluetoothLeIntentService);
     }
 
     @Override
@@ -240,52 +252,47 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-
     }
 
     public void onReceiveBluetoothUpdate(Bundle resultData) {
-        Log.d(TAG, "========================I am in onReceiveBluetoothUpdate======================================");
         if (null != resultData.getString("Connected")) {
-            Log.d(TAG, "========================I am in onReceiveBluetoothUpdate - Connected If Statement========================");
-            bluetoothConnected = true;
-            bluetoothDisconnected = false;
-            bluetoothFailedToConnect = false;
-            this.runOnUiThread(new Runnable()
-            {
-                public void run()
-                {
-                    bluetoothItem.setIcon(R.drawable.ic_bluetooth_black_24dp);
-                    Toast.makeText(getApplicationContext(), "Bluetooth Connected", Toast.LENGTH_SHORT).show();
-                }
-            });
-
-
+            connectionStatus(true, false, false);
+            updateUI("Bluetooth Connected");
         } else if (null != resultData.getString("Disconnected")) {
-            Log.d(TAG, "========================I am in onReceiveBluetoothUpdate - Disconnected If Statement========================");
-            bluetoothConnected = false;
-            bluetoothDisconnected = true;
-            bluetoothFailedToConnect = false;
-            this.runOnUiThread(new Runnable()
-            {
-                public void run()
-                {
-                    bluetoothItem.setIcon(R.mipmap.ic_bluetooth_white_24dp);
-                    Toast.makeText(getApplicationContext(), "Bluetooth Disconnected", Toast.LENGTH_SHORT).show();
-                }
-            });
+            connectionStatus(false, true, false);
+            updateUI("Bluetooth Disconnected");
         } else if (null != resultData.getString("Failed to Connect")) {
-            Log.d(TAG, "========================I am in onReceiveBluetoothUpdate - Failed To Connect If Statement====================");
-            bluetoothConnected = false;
-            bluetoothDisconnected = false;
-            bluetoothFailedToConnect = true;
-            this.runOnUiThread(new Runnable()
-            {
-                public void run()
-                {
-                    Toast.makeText(getApplicationContext(), "Failed to Connect Bluetooth", Toast.LENGTH_SHORT).show();
-                }
-            });
+            connectionStatus(false, true, true);
+            updateUI("Failed to Connect Bluetooth");
+        } else if (null != resultData.getString("No device")) {
+            connectionStatus(false, true, true);
+            updateUI("No Bluetooth Device Present");
+        } else if (null != resultData.getString("Scanning")) {
+            connectionStatus(false, true, false);
+            updateUI("Scanning for Bluetooth Device...");
         }
+    }
+
+    void updateUI(String s) {
+        final String message = s;
+        this.runOnUiThread(new Runnable()
+        {
+            public void run()
+            {
+                bluetoothItem.setIcon(R.drawable.ic_bluetooth_black_24dp);
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void connectionStatus(boolean connected, boolean disconnected, boolean failed) {
+        bluetoothConnected = connected;
+        bluetoothDisconnected = disconnected;
+        bluetoothFailedToConnect = failed;
+    }
+
+
+    public void onReceiveDirectionsUpdate(Bundle resultData) {
     }
 }
 
@@ -323,8 +330,26 @@ class BluetoothResultReceiver extends ResultReceiver
 
     @Override
     protected void onReceiveResult(int resultCode, Bundle resultData) {
-        Log.d(TAG, "========================I am in BluetoothResultReceiver.onReceiveResult====================");
         maps.onReceiveBluetoothUpdate(resultData);
+    }
+}
+
+class DirectionsResultReceiver extends ResultReceiver
+{
+    private MapsActivity maps;
+
+    public DirectionsResultReceiver(Handler handler) {
+        super(handler);
+    }
+
+    public DirectionsResultReceiver(Handler handler, MapsActivity m) {
+        super(handler);
+        maps = m;
+    }
+
+    @Override
+    protected void onReceiveResult(int resultCode, Bundle resultData) {
+        maps.onReceiveDirectionsUpdate(resultData);
     }
 }
 

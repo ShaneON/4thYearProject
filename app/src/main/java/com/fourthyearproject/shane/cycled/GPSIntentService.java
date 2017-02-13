@@ -5,9 +5,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
 import android.os.ResultReceiver;
-import android.util.Log;
+import android.support.v4.app.ActivityCompat;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -51,7 +50,6 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
     }
 
     protected void createLocationRequest() {
-        Log.d(TAG, "-----------------------------------------inside createLocationRequest-----------------------------------------------");
         locationRequest = new LocationRequest();
         locationRequest.setInterval(5000);
         locationRequest.setFastestInterval(3000);
@@ -74,7 +72,6 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
 
     @Override
     public void onConnected(Bundle connectionHint) {
-        Log.d(TAG, "------------------------------inside onConnected-----------------------------------------------------");
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
                 android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -90,7 +87,6 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
     }
 
     protected void startLocationUpdates() {
-        Log.d(TAG, "------------------------------inside startLocationUpdates-------------------------------------------");
 
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
@@ -103,7 +99,6 @@ public class GPSIntentService extends IntentService implements GoogleApiClient.C
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.d(TAG, "------------------------------------------------inside onLocationChanged-------------------------------------------");
         currentLocation = location;
         currentLatLng = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
         String bundleLatitude = Double.toString(currentLocation.getLatitude());
