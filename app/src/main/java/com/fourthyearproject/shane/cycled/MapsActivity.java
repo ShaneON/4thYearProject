@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
@@ -12,9 +13,11 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Status;
@@ -45,6 +48,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean bluetoothDisconnected;
     private boolean bluetoothFailedToConnect;
     private MenuItem bluetoothItem;
+    private Location origin;
+    private Location destination;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +76,32 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+        if (id == R.id.bluetooth_search) {
+            bluetoothItem = item;
+            bluetoothServiceStartup();
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
         switch (requestCode) {
             case PERMISSION_REQUEST_COARSE_LOCATION: {
@@ -83,7 +114,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     directionsSetup();
                     googleApiClientSetup();
-                    mapsServiceStartup();
+                    gpsServiceStartup();
 
                 } else {
                     final AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -102,13 +133,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void mapsServiceStartup() {
-        MapsResultReceiver mapsResultReceiver = new MapsResultReceiver(null, this);
-        Intent gpsIntentService = new Intent(this, GPSIntentService.class);
-        gpsIntentService.putExtra("resultReceiver", mapsResultReceiver);
-        startService(gpsIntentService);
-    }
-
     private void googleApiClientSetup() {
         //Create an instance of GoogleAPIClient.
         if (googleApiClient == null) {
@@ -120,7 +144,27 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     .build();
         }
         googleApiClient.connect();
+    }
 
+    private void gpsDestinationServiceStartup() {
+        MapsResultReceiver mapsResultReceiver = new MapsResultReceiver(null, this);
+        Intent gpsService = new Intent(this, GPSService.class);
+        gpsService.putExtra("resultReceiver", mapsResultReceiver);
+        String origin = currentLatLng.latitude + "," + currentLatLng.longitude;
+        String destination = destinationLatLng.latitude + "," + destinationLatLng.longitude;
+        gpsService.putExtra("URL", "https://maps.googleapis.com/maps/api/directions/json?origin=" +
+                        origin + "&destination=" + destination);
+        Log.d(TAG, origin + ", " + destination);
+        startService(gpsService);
+    }
+
+    //"https://maps.googleapis.com/maps/api/directions/json?origin=53.3693447,-6.2422778&destination=53.385062,-6.2567866"
+
+    private void gpsServiceStartup() {
+        MapsResultReceiver mapsResultReceiver = new MapsResultReceiver(null, this);
+        Intent gpsService = new Intent(this, GPSService.class);
+        gpsService.putExtra("resultReceiver", mapsResultReceiver);
+        startService(gpsService);
     }
 
     private void directionsSetup() {
@@ -130,9 +174,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
+
                 destinationLatLng = place.getLatLng();
                 addDestinationMarker();
-                directionsServiceStartup();
+                setDestinationLocation();
+                gpsDestinationServiceStartup();
             }
 
             @Override
@@ -143,22 +189,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    private void directionsServiceStartup() {
-        DirectionsResultReceiver directionsResultReceiver = new DirectionsResultReceiver(null, this);
-        Intent directionsIntentService = new Intent(this, DirectionsIntentService.class);
-        directionsIntentService.putExtra("resultReceiver", directionsResultReceiver);
-        startService(directionsIntentService);
-    }
-
     private void addDestinationMarker() {
         MarkerOptions markerOptions = new MarkerOptions().position(destinationLatLng);
         marker = mMap.addMarker(markerOptions);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
     }
 
     @Override
@@ -193,10 +226,23 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         double latitude = Double.parseDouble(la);
         double longitude = Double.parseDouble(lo);
         currentLatLng = new LatLng(latitude, longitude);
+        setOriginLocation();
         if(firstUpdate) {
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 12.0f));
             firstUpdate = false;
         }
+    }
+
+    private void setOriginLocation() {
+        origin = new Location("origin");
+        origin.setLatitude(currentLatLng.latitude);
+        origin.setLongitude(currentLatLng.longitude);
+    }
+
+    private void setDestinationLocation() {
+        destination = new Location("destination");
+        destination.setLatitude(currentLatLng.latitude);
+        destination.setLongitude(currentLatLng.longitude);
     }
 
     protected void onStart() {
@@ -213,26 +259,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     {
         googleApiClient.disconnect();
         super.onDestroy();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.bluetooth_search) {
-            bluetoothItem = item;
-            bluetoothServiceStartup();
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     private void bluetoothServiceStartup() {
@@ -290,10 +316,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         bluetoothDisconnected = disconnected;
         bluetoothFailedToConnect = failed;
     }
-
-
-    public void onReceiveDirectionsUpdate(Bundle resultData) {
-    }
 }
 
 class MapsResultReceiver extends ResultReceiver
@@ -334,22 +356,5 @@ class BluetoothResultReceiver extends ResultReceiver
     }
 }
 
-class DirectionsResultReceiver extends ResultReceiver
-{
-    private MapsActivity maps;
 
-    public DirectionsResultReceiver(Handler handler) {
-        super(handler);
-    }
-
-    public DirectionsResultReceiver(Handler handler, MapsActivity m) {
-        super(handler);
-        maps = m;
-    }
-
-    @Override
-    protected void onReceiveResult(int resultCode, Bundle resultData) {
-        maps.onReceiveDirectionsUpdate(resultData);
-    }
-}
 

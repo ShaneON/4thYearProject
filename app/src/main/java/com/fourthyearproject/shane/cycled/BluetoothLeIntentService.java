@@ -39,6 +39,7 @@ public class BluetoothLeIntentService extends IntentService {
     private Handler handler;
     private boolean scanning;
     private final int SCAN_TIME = 10000;
+    private int currentState;
 
     public BluetoothLeIntentService() {
         super("BluetoothLeIntentService");
@@ -48,9 +49,15 @@ public class BluetoothLeIntentService extends IntentService {
         super(name);
     }
 
+    int getCurrentState()
+    {
+        return currentState;
+    }
+
     @Override
     protected void onHandleIntent(Intent intent) {
         adapter = BluetoothAdapter.getDefaultAdapter();
+        handler = new Handler();
         resultReceiver = intent.getParcelableExtra("resultReceiver");
         scanForDevices();
     }
@@ -63,7 +70,6 @@ public class BluetoothLeIntentService extends IntentService {
             public void run() {
 
                 scanning = false;
-                bluetoothLeScanner.stopScan(leScanCallback);
                 bluetoothBundle.putString("No device", "No device detected, please turn on bluetooth device.");
                 resultReceiver.send(0, bluetoothBundle);
             }
@@ -80,6 +86,7 @@ public class BluetoothLeIntentService extends IntentService {
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             super.onConnectionStateChange(gatt, status, newState);
             Bundle bluetoothBundle = new Bundle();
+            currentState = newState;
             if (newState == BluetoothGatt.STATE_CONNECTED) {
 
                 if (!gatt.discoverServices()) {

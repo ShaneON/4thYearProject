@@ -34,6 +34,10 @@ I also added a bluetooth button that changes colour depending on if its connecte
 
 ## My Fifth Blog Entry
 I have my directions background service connecting to the google directions web service, it returns a JSON file which I will need to parse to extract the information from.
-So that is my next task. 
+So that is my next task.
 
+## My Sixth Blog Entry
+I now have the app pulling directions from the google server, it comes in the form of a JSON which I am currently working on parsing and turning into usable data.
+I am almost ready to start working on an algorithm for detecting when a user needs to turn and also one for updating the routes. It is difficult to test my app to se if I am
+heading in the right direction as it is supposed to be used on the road, but I would be hoping to be able to road test a very rough version of it in a few weeks time.
 
