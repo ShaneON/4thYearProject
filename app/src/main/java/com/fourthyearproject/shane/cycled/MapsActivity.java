@@ -5,12 +5,10 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.ResultReceiver;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -32,9 +30,19 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.android.PolyUtil;
+
+import java.util.LinkedList;
+import java.util.List;
+
+import static com.fourthyearproject.shane.cycled.R.id.map;
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback,
         GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks{
+
+    private static final String TAG = "MapsActivity";
 
     private GoogleMap mMap;
     GoogleApiClient googleApiClient;
@@ -43,33 +51,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LatLng currentLatLng;
     private boolean firstUpdate = true;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
-    private static final String TAG = "MapsActivity";
     private boolean bluetoothConnected;
     private boolean bluetoothDisconnected;
     private boolean bluetoothFailedToConnect;
+    private boolean bluetoothScanning;
     private MenuItem bluetoothItem;
-    private Location origin;
-    private Location destination;
+    //private TextView distanceText;
+    private boolean firstSelection = true;
+    private Polyline polyline = null;
+    private LinkedList<LatLng> waypointList = new LinkedList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-        if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("This app needs location access");
-            builder.setMessage("Please grant location access so this app can detect beacons.");
-            builder.setPositiveButton(android.R.string.ok, null);
-            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
-                }
-            });
-            builder.show();
-        }
+        //distanceText = (TextView) findViewById(R.id.distance_text_view);
+        //distanceText.setTextSize(getResources().getDimension(R.dimen.text_size));
+        //distanceText.setTextColor(Color.RED);
 
         Toolbar myToolbar = (Toolbar) findViewById(R.id.maps_toolbar);
         setSupportActionBar(myToolbar);
@@ -78,57 +77,94 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onResume() {
         super.onResume();
+    }
 
+    protected void onStart() {
+        super.onStart();
+        if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            dialogBuilder("Location access", "Please grant location access", true, false);
+        }
+        else onStartSetup();
+    }
+
+    private void onStartSetup() {
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(map);
+        mapFragment.getMapAsync(this);
+
+        directionsSetup();
+        googleApiClientSetup();
+        gpsServiceStartup();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    protected void onStop() {
+        super.onStop();
+        if(null != marker) marker.remove();
+        if(null != googleApiClient) googleApiClient.disconnect();
+    }
+
+    protected void onDestroy() {
+        super.onDestroy();
+        this.stopService(new Intent(this, GPSService.class));
+        this.stopService(new Intent(this, BluetoothLeService.class));
+    }
+
+    void dialogBuilder(String title, String message, boolean p, boolean s) {
+        final boolean permission = p;
+        final boolean scanning = s;
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(title);
+        builder.setMessage(message);
+        if(permission) builder.setPositiveButton(android.R.string.ok, null);
+        else builder.setPositiveButton(android.R.string.cancel, null);
+        builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                if(permission)
+                    requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                        PERMISSION_REQUEST_COARSE_LOCATION);
+                if(scanning) {
+                    stopService(new Intent(getApplicationContext(), BluetoothLeService.class));
+                    Toast.makeText(getApplicationContext(), "Bluetooth service has stopped",
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        builder.show();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.bluetooth_search) {
             bluetoothItem = item;
-            bluetoothServiceStartup();
+            bluetoothLeServiceStartup();
         }
+        else if (id == R.id.bicycle_icon)
+            gpsDestinationServiceStartup();
         return super.onOptionsItemSelected(item);
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
         switch (requestCode) {
             case PERMISSION_REQUEST_COARSE_LOCATION: {
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-                    SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                            .findFragmentById(R.id.map);
-                    mapFragment.getMapAsync(this);
-
-                    directionsSetup();
-                    googleApiClientSetup();
-                    gpsServiceStartup();
-
-                } else {
-                    final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                    builder.setTitle("Functionality limited");
-                    builder.setMessage("App does not have permission to connect via bluetooth");
-                    builder.setPositiveButton(android.R.string.ok, null);
-                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                        @Override
-                        public void onDismiss(DialogInterface dialog) {
-                        }
-                    });
-                    builder.show();
-                }
-                return;
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) onStartSetup();
+                else dialogBuilder("Functionality limited", "No bluetooth permission", false, false);
             }
         }
     }
@@ -152,13 +188,26 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         gpsService.putExtra("resultReceiver", mapsResultReceiver);
         String origin = currentLatLng.latitude + "," + currentLatLng.longitude;
         String destination = destinationLatLng.latitude + "," + destinationLatLng.longitude;
-        gpsService.putExtra("URL", "https://maps.googleapis.com/maps/api/directions/json?origin=" +
-                        origin + "&destination=" + destination);
+        String url = makeDirectionsURL(origin, destination);
+        gpsService.putExtra("URL", url);
         Log.d(TAG, origin + ", " + destination);
         startService(gpsService);
     }
 
-    //"https://maps.googleapis.com/maps/api/directions/json?origin=53.3693447,-6.2422778&destination=53.385062,-6.2567866"
+    private String makeDirectionsURL(String origin, String destination) {
+        String url = "https://maps.googleapis.com/maps/api/directions/json?origin=" +
+                origin + "&destination=" + destination;
+        if(!waypointList.isEmpty()){
+            url = url + "&waypoints=optimize:true" +
+                    "via:" + Double.toString(waypointList.get(0).latitude) + "%2C" +
+                    Double.toString(waypointList.get(0).longitude);
+            for(int i = 1; i < waypointList.size(); i++){
+                url = url + "%7Cvia:" + Double.toString(waypointList.get(i).latitude) + "%2C" +
+                        Double.toString(waypointList.get(i).longitude);
+            }
+        }
+        return url + "&mode=bicycling";
+    }
 
     private void gpsServiceStartup() {
         MapsResultReceiver mapsResultReceiver = new MapsResultReceiver(null, this);
@@ -168,30 +217,33 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void directionsSetup() {
-
         PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
                 getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
-
-                destinationLatLng = place.getLatLng();
-                addDestinationMarker();
-                setDestinationLocation();
-                gpsDestinationServiceStartup();
+                if(null != polyline) {
+                    Toast.makeText(getApplicationContext(),
+                            "polyline not null :)", Toast.LENGTH_SHORT).show();
+                }
+                processPlaceSelection(place.getLatLng());
             }
-
             @Override
             public void onError(Status status) {
                 // TODO: Handle the error.
-                //Log.i(TAG, "An error occurred: " + status);
+                Log.d(TAG, "Error with place selection: " + status);
             }
         });
     }
 
-    private void addDestinationMarker() {
-        MarkerOptions markerOptions = new MarkerOptions().position(destinationLatLng);
+    private void processPlaceSelection(LatLng latLng) {
+        MarkerOptions markerOptions = new MarkerOptions().position(latLng);
         marker = mMap.addMarker(markerOptions);
+        if(firstSelection) {
+            firstSelection = false;
+            destinationLatLng = latLng;
+        }
+        else waypointList.add(latLng);
     }
 
     @Override
@@ -200,72 +252,31 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // could not be established. Display an error message, or handle
         // the failure silently
 
-        // ...
-    }
-
-    @Override
-    public void onConnectionSuspended(int result) {
-        // An unresolvable error has occurred and a connection to Google APIs
-        // could not be established. Display an error message, or handle
-        // the failure silently
-
-        // ...
     }
 
     @Override
     public void onConnected(Bundle connectionHint) {}
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        if(null != marker) marker.remove();
+    public void onConnectionSuspended(int i) {
+
     }
 
-    void onReceiveGPSUpdate(String la, String lo) {
-
+    void onReceiveGPSUpdate(String la, String lo, String pol, String dir, String dis) {
         double latitude = Double.parseDouble(la);
         double longitude = Double.parseDouble(lo);
         currentLatLng = new LatLng(latitude, longitude);
-        setOriginLocation();
         if(firstUpdate) {
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 12.0f));
             firstUpdate = false;
         }
-    }
-
-    private void setOriginLocation() {
-        origin = new Location("origin");
-        origin.setLatitude(currentLatLng.latitude);
-        origin.setLongitude(currentLatLng.longitude);
-    }
-
-    private void setDestinationLocation() {
-        destination = new Location("destination");
-        destination.setLatitude(currentLatLng.latitude);
-        destination.setLongitude(currentLatLng.longitude);
-    }
-
-    protected void onStart() {
-
-        super.onStart();
-    }
-/*
-    protected void onStop() {
-        googleApiClient.disconnect();
-        super.onStop();
-    }
-*/
-    protected void onDestroy()
-    {
-        googleApiClient.disconnect();
-        super.onDestroy();
-    }
-
-    private void bluetoothServiceStartup() {
-        BluetoothResultReceiver bluetoothResultReceiver = new BluetoothResultReceiver(null, this);
-        Intent bluetoothLeIntentService = new Intent(this, BluetoothLeIntentService.class);
-        bluetoothLeIntentService.putExtra("resultReceiver", bluetoothResultReceiver);
-        startService(bluetoothLeIntentService);
+        if(null != pol) {
+            updateUiPolyline(pol);
+        }
+        if(null != dir && !"".equals(dir)) {
+            updateUiDirection(dir);
+        }
+        //distanceText.setText(dis + " " + dir);
     }
 
     @Override
@@ -276,85 +287,72 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             mMap.setMyLocationEnabled(true);
         }
-
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+    }
+
+    void updateUiPolyline(String p) {
+        List<LatLng> polylineList = PolyUtil.decode(p);
+        polyline = mMap.addPolyline(new PolylineOptions()
+                .addAll(polylineList)
+                .width(6)
+                .color(ContextCompat.getColor(getApplicationContext(), R.color.sky))
+                .geodesic(true));
+    }
+
+    void updateUiDirection(String s) {
+        final String message = s;
+        this.runOnUiThread(new Runnable() {
+            public void run() {
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void bluetoothLeServiceStartup() {
+        BluetoothResultReceiver bluetoothResultReceiver = new BluetoothResultReceiver(null, this);
+        Intent bluetoothLeService = new Intent(this, BluetoothLeService.class);
+        bluetoothLeService.putExtra("resultReceiver", bluetoothResultReceiver);
+        startService(bluetoothLeService);
     }
 
     public void onReceiveBluetoothUpdate(Bundle resultData) {
         if (null != resultData.getString("Connected")) {
-            connectionStatus(true, false, false);
-            updateUI("Bluetooth Connected");
+            connectionStatus(true, false, false, false);
+            updateUiBluetooth("Bluetooth Connected", null);
         } else if (null != resultData.getString("Disconnected")) {
-            connectionStatus(false, true, false);
-            updateUI("Bluetooth Disconnected");
+            connectionStatus(false, true, false, false);
+            updateUiBluetooth("Bluetooth Disconnected", null);
         } else if (null != resultData.getString("Failed to Connect")) {
-            connectionStatus(false, true, true);
-            updateUI("Failed to Connect Bluetooth");
+            connectionStatus(false, true, true, true);
+            updateUiBluetooth("Failed to Connect Bluetooth", null);
         } else if (null != resultData.getString("No device")) {
-            connectionStatus(false, true, true);
-            updateUI("No Bluetooth Device Present");
+            connectionStatus(false, true, true, true);
+            updateUiBluetooth("No Bluetooth Device Present", null);
         } else if (null != resultData.getString("Scanning")) {
-            connectionStatus(false, true, false);
-            updateUI("Scanning for Bluetooth Device...");
+            connectionStatus(false, true, false, true);
+            updateUiBluetooth("Scanning for Bluetooth Device...", null);
         }
     }
 
-    void updateUI(String s) {
+    void updateUiBluetooth(String s, String p) {
         final String message = s;
-        this.runOnUiThread(new Runnable()
-        {
-            public void run()
-            {
-                bluetoothItem.setIcon(R.drawable.ic_bluetooth_black_24dp);
+        this.runOnUiThread(new Runnable() {
+            public void run() {
+                if(bluetoothConnected)
+                    bluetoothItem.setIcon(R.drawable.ic_bluetooth_black_24dp);
+                else
+                    bluetoothItem.setIcon(R.mipmap.ic_bluetooth_white_24dp);
+                if(bluetoothScanning)
+                    dialogBuilder("Scanning", "Scanning for device...", false, true);
                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void connectionStatus(boolean connected, boolean disconnected, boolean failed) {
+    private void connectionStatus(boolean connected, boolean disconnected, boolean failed, boolean scanning) {
         bluetoothConnected = connected;
         bluetoothDisconnected = disconnected;
         bluetoothFailedToConnect = failed;
+        bluetoothScanning = scanning;
     }
 }
-
-class MapsResultReceiver extends ResultReceiver
-{
-    private MapsActivity maps;
-
-    public MapsResultReceiver(Handler handler) {
-        super(handler);
-    }
-
-    public MapsResultReceiver(Handler handler, MapsActivity m) {
-        super(handler);
-        maps = m;
-    }
-
-    @Override
-    protected void onReceiveResult(int resultCode, Bundle resultData) {
-        maps.onReceiveGPSUpdate(resultData.getString("latitude"), resultData.getString("longitude"));
-    }
-}
-
-class BluetoothResultReceiver extends ResultReceiver
-{
-    private MapsActivity maps;
-
-    public BluetoothResultReceiver(Handler handler) {
-        super(handler);
-    }
-
-    public BluetoothResultReceiver(Handler handler, MapsActivity m) {
-        super(handler);
-        maps = m;
-    }
-
-    @Override
-    protected void onReceiveResult(int resultCode, Bundle resultData) {
-        maps.onReceiveBluetoothUpdate(resultData);
-    }
-}
-
-
-

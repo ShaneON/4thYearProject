@@ -15,4 +15,20 @@
         android:icon="@mipmap/ic_bluetooth_white_24dp"
         app:showAsAction="ifRoom"
         />
+
+    <item
+        android:id="@+id/bicycle_icon"
+        android:orderInCategory="300"
+        android:title="bicycle_icon"
+        android:icon="@drawable/bicycle_icon"
+        app:showAsAction="ifRoom"
+        />
+<!--
+    <item
+        android:id="@+id/download_icon"
+        android:orderInCategory="400"
+        android:title="download_icon"
+        android:icon="@drawable/download_icon"
+        app:showAsAction="ifRoom"
+        /> -->
 </menu>

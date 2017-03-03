@@ -19,11 +19,16 @@
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
     />
 
+    <!--<TextView
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:id="@+id/distance_text_view"
+        /> -->
+
     <fragment
         android:id="@+id/place_autocomplete_fragment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-
         android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment"
         />
 

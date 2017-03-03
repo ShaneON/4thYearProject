@@ -6,33 +6,21 @@ package com.fourthyearproject.shane.cycled;
 
 public class Step {
 
-    private String startLat;
-    private String startLng;
     private String endLat;
     private String endLng;
     private String distance;
-    private String polyline;
-    private int id;
+    private String maneuver;
 
-    public Step(String startLat, String startLng, String endLat,
-                String endLng, String distance, String polyline,
-                int id)
+    public Step(String endLat, String endLng, String distance, String maneuver)
     {
-        this.startLat = startLat;
-        this.startLng = startLng;
         this.endLat = endLat;
         this.endLng = endLng;
         this.distance = distance;
-        this.polyline = polyline;
-        this.id = id;
+        this.maneuver = maneuver;
     }
 
-    public String getStartLat() {
-        return startLat;
-    }
-
-    public String getStartLng() {
-        return startLng;
+    public String getManeuver() {
+        return maneuver;
     }
 
     public String getEndLat() {
@@ -45,10 +33,6 @@ public class Step {
 
     public String getDistance() {
         return distance;
-    }
-
-    public String getPolyline() {
-        return polyline;
     }
 
 }

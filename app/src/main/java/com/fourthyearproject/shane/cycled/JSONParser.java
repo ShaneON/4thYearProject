@@ -13,17 +13,32 @@ import java.util.LinkedList;
 
 public class JSONParser {
 
+    private final String TAG = "JSONParser";
+
     private JSONObject jsonDirectionsObject;
-    private LinkedList<Step> stepsList = new LinkedList<>();
+    private LinkedList<Step> stepsList;
+    private boolean listFull = false;
+    private String polyline;
 
     public JSONParser(String json)
     {
         try
         {
             jsonDirectionsObject = new JSONObject(json);
+            parseJSON();
         }
         catch(JSONException e){}
 
+    }
+
+    public boolean getListFull()
+    {
+        return listFull;
+    }
+
+    public String getPolyline()
+    {
+        return polyline;
     }
 
     LinkedList<Step> getStepsList()
@@ -31,23 +46,28 @@ public class JSONParser {
         return stepsList;
     }
 
-    private void parseJSON(String directions) {
+    private void parseJSON() {
         try
         {
+            stepsList = new LinkedList<>();
             JSONArray routesJSON = jsonDirectionsObject.getJSONArray("routes");
-            JSONArray legsJSON = routesJSON.getJSONArray(0);
+            JSONArray legsJSON = routesJSON.getJSONObject(0).getJSONArray("legs");
             JSONObject journeyDetailsJSON = legsJSON.getJSONObject(0);
-            JSONArray stepsJSON = legsJSON.getJSONArray(1);
+            JSONArray stepsJSON = legsJSON.getJSONObject(0).getJSONArray("steps");
+            polyline = routesJSON.getJSONObject(0).getJSONObject("overview_polyline").getString("points");
+
             for(int i = 0; i < stepsJSON.length(); i++)
             {
                 String distance = stepsJSON.getJSONObject(i).getJSONObject("distance").getString("value");
-                String startLat = stepsJSON.getJSONObject(i).getJSONObject("start_location").getString("lat");
-                String startLng = stepsJSON.getJSONObject(i).getJSONObject("start_location").getString("lng");
                 String endLat = stepsJSON.getJSONObject(i).getJSONObject("end_location").getString("lat");
                 String endLng = stepsJSON.getJSONObject(i).getJSONObject("end_location").getString("lng");
-                String polyline = stepsJSON.getJSONObject(i).getJSONObject("polyline").getString("points");
-                stepsList.add(new Step(distance, startLat, startLng, endLat, endLng, polyline, i));
+                String maneuver;
+                if(stepsJSON.getJSONObject(i).has("maneuver"))
+                    maneuver = stepsJSON.getJSONObject(i).getString("maneuver");
+                else maneuver = "";
+                stepsList.add(new Step(endLat, endLng, distance, maneuver));
             }
+            listFull = true;
         }
         catch(JSONException e) {}
 

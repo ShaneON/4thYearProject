@@ -11,12 +11,13 @@ import android.os.ResultReceiver;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.model.LatLng;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,20 +30,23 @@ import javax.net.ssl.HttpsURLConnection;
 public class GPSService extends Service implements GoogleApiClient.ConnectionCallbacks,
         LocationListener, GoogleApiClient.OnConnectionFailedListener {
 
+    private static final String TAG = "GPSService";
+
     private LocationRequest locationRequest;
     private Location currentLocation;
     private GoogleApiClient googleApiClient;
-    private LatLng currentLatLng;
     ResultReceiver resultReceiver;
-    private static final String TAG = "GPSService";
     private String urlString;
-    private BufferedReader buffer;
     private JSONParser parser;
     private int step;
+    private boolean routeDownloaded = false;
+    private String direction = null;
+    private boolean aboutToTurn;
+    private float distance = 0.0f;
+    private int turnNum = 0;
 
-    @Override // Function called when service is started from activity
+    @Override // Function called when service is started from  activity
     public int onStartCommand(Intent intent, int flags, int startId) {
-
         createLocationRequest();
         //Create an instance of GoogleAPIClient.
         if (googleApiClient == null) {
@@ -61,13 +65,20 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
             Log.d(TAG, urlString + "in onStartCommand");
             getDirections();
         }
+        step = 0;
         return super.onStartCommand(intent, flags, startId);
     }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+    }
+
     // Creates a new location request
     protected void createLocationRequest() {
         locationRequest = new LocationRequest();
-        locationRequest.setInterval(5000);
-        locationRequest.setFastestInterval(3000);
+        locationRequest.setInterval(500);
+        locationRequest.setFastestInterval(250);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
@@ -76,20 +87,13 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
                 googleApiClient, this);
     }
 
-    // Checks if the user is still on the correct route
-    private boolean userOnRoute()
-    {
-        //TODO
-        return true;
-    }
-
     // Calls the inner class download directions
-    private void getDirections()
-    {
+    private void getDirections() {
         try{
             new DownloadDirections().execute(
                     new URL(urlString));
         }catch(MalformedURLException m) {}
+
     }
 
     // Makes a web request for directions from the google API, this is an asynchronous class
@@ -99,6 +103,7 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
         @Override
         protected Long doInBackground(URL... params) {
             Log.d(TAG, "in doInBackground");
+            BufferedReader buffer;
             InputStream stream = null;
             HttpsURLConnection connection = null;
             String result = "";
@@ -118,7 +123,7 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
                 // Open communications link (network traffic occurs here).
                 connection.connect();
                 int responseCode = connection.getResponseCode();
-                if (responseCode != HttpsURLConnection.HTTP_OK) {
+                if(responseCode != HttpsURLConnection.HTTP_OK) {
                     throw new IOException("HTTP error code: " + responseCode);
                 }
                 // Retrieve the response body as an InputStream.
@@ -132,6 +137,7 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
                 }
 
                 String directions = sb.toString();
+                routeDownloaded = true;
                 parser = new JSONParser(directions);
             }
             catch(MalformedURLException m) {}
@@ -165,6 +171,7 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
         // the failure silently
         // ...
     }
+
     @Override
     public void onConnected(Bundle connectionHint) {
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
@@ -174,9 +181,6 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
         }
         currentLocation = LocationServices.FusedLocationApi.getLastLocation(
                 googleApiClient);
-        if (currentLocation != null) {
-            currentLatLng = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
-        }
         startLocationUpdates();
     }
     protected void startLocationUpdates() {
@@ -191,33 +195,65 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
     @Override
     public void onLocationChanged(Location location) {
         currentLocation = location;
-        currentLatLng = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
         if(!userOnRoute()) {
             updateRouteURL();
             getDirections();
         }
-        double distance = getDistanceToTurn();
+        if(routeDownloaded && parser.getListFull()){
+            distance = getDistanceToTurn();
+            String distanceString = "" + distance;
+            Log.d(TAG, distanceString);
+            if(getDistanceToTurn() < 30.0f && !aboutToTurn) {
+                lightUpTurnSignal();
+                aboutToTurn = true;
+            }
+            if(getDistanceToTurn() < 15.0f && aboutToTurn) {
+                aboutToTurn = false;
+                step++;
+            }
+        }
         sendBundle();
     }
 
-    // Send the up-to-date GPS co ordinates to the maps activity's result receiver
-    private void sendBundle()
-    {
-        Bundle locationBundle = new Bundle();
-        locationBundle.putString("latitude", Double.toString(currentLocation.getLatitude()));
-        locationBundle.putString("longitude", Double.toString(currentLocation.getLongitude()));
-        resultReceiver.send(0, locationBundle);
+    // Checks if the user is still on the correct route
+    private boolean userOnRoute() {
+
+        return true;
+    }
+
+    // Light up the appropriate turn signal
+    private void lightUpTurnSignal() {
+        turnNum++;
+        Intent intent = new Intent("directions message");
+        direction = parser.getStepsList().get(step + 1).getManeuver() + " " + turnNum;
+        //intent.putExtra("direction", direction);
+        //LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     // Find the distance between the user and the next turn
-    private double getDistanceToTurn() {
-        String endOfStepLat = parser.getStepsList().getFirst().getEndLat();
-        String endOfStepLng = parser.getStepsList().getFirst().getEndLng();
+    private float getDistanceToTurn() {
+        String endOfStepLat = parser.getStepsList().get(step).getEndLat();
+        String endOfStepLng = parser.getStepsList().get(step).getEndLng();
         Location turn = new Location("turn");
         turn.setLatitude(Double.parseDouble(endOfStepLat));
         turn.setLongitude(Double.parseDouble(endOfStepLng));
-        double distance = currentLocation.distanceTo(turn);
-        return distance;
+        return currentLocation.distanceTo(turn);
+    }
+
+    // Send the up-to-date GPS co ordinates to the maps activity's result receiver
+    private void sendBundle() {
+        String polyline = null;
+        Bundle locationBundle = new Bundle();
+        if(routeDownloaded && null != parser.getPolyline())
+            polyline = parser.getPolyline();
+        String distanceFloat = "" + distance;
+        locationBundle.putString("latitude", Double.toString(currentLocation.getLatitude()));
+        locationBundle.putString("longitude", Double.toString(currentLocation.getLongitude()));
+        locationBundle.putString("polyline", polyline);
+        locationBundle.putString("direction", direction);
+        locationBundle.putString("distance", distanceFloat);
+        resultReceiver.send(0, locationBundle);
+        direction = "";
     }
 
     // Makes a new URL for an updated route to be requested

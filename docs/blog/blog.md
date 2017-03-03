@@ -41,3 +41,11 @@ I now have the app pulling directions from the google server, it comes in the fo
 I am almost ready to start working on an algorithm for detecting when a user needs to turn and also one for updating the routes. It is difficult to test my app to se if I am
 heading in the right direction as it is supposed to be used on the road, but I would be hoping to be able to road test a very rough version of it in a few weeks time.
 
+## My Seventh Blog Entry
+I now have a functioning version of the app which I have tested by itself by walking a few routes and the GPS seems to hold up well and
+it directs me to my destination without any problems. I have not however tested it with the flora board yet. This is because the weather has
+been very bad lately and the hardware is very out in the open so it could be damaged by rain. As soon as i get a clear day I will test
+the whole system together but I expect it to all work together well.
+My next task is to test out the hardware accelerometer and GPS modules that come with the flora to see if they can be of use for my project.
+The GPS module will be very difficult to test properly as it can only be used outdoors with a clear view of the sky, which is unfortunately
+a big ask in Ireland.
