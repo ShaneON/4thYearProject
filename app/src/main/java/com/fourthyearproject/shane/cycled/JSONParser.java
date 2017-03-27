@@ -1,5 +1,9 @@
 package com.fourthyearproject.shane.cycled;
 
+import android.content.Context;
+import android.content.Intent;
+import android.support.v4.content.LocalBroadcastManager;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,13 +23,14 @@ public class JSONParser {
     private LinkedList<Step> stepsList;
     private boolean listFull = false;
     private String polyline;
+    private Context context;
 
-    public JSONParser(String json)
-    {
-        try
-        {
+    public JSONParser(String json, Context context) {
+        try {
             jsonDirectionsObject = new JSONObject(json);
+            this.context = context;
             parseJSON();
+            sendLatLngsToBluetooth();
         }
         catch(JSONException e){}
 
@@ -46,9 +51,9 @@ public class JSONParser {
         return stepsList;
     }
 
+
     private void parseJSON() {
-        try
-        {
+        try {
             stepsList = new LinkedList<>();
             JSONArray routesJSON = jsonDirectionsObject.getJSONArray("routes");
             JSONArray legsJSON = routesJSON.getJSONObject(0).getJSONArray("legs");
@@ -56,20 +61,29 @@ public class JSONParser {
             JSONArray stepsJSON = legsJSON.getJSONObject(0).getJSONArray("steps");
             polyline = routesJSON.getJSONObject(0).getJSONObject("overview_polyline").getString("points");
 
-            for(int i = 0; i < stepsJSON.length(); i++)
-            {
+            for(int i = 0; i < stepsJSON.length(); i++) {
                 String distance = stepsJSON.getJSONObject(i).getJSONObject("distance").getString("value");
                 String endLat = stepsJSON.getJSONObject(i).getJSONObject("end_location").getString("lat");
                 String endLng = stepsJSON.getJSONObject(i).getJSONObject("end_location").getString("lng");
+                String startLat = stepsJSON.getJSONObject(i).getJSONObject("start_location").getString("lat");
+                String startLng = stepsJSON.getJSONObject(i).getJSONObject("start_location").getString("lng");
                 String maneuver;
                 if(stepsJSON.getJSONObject(i).has("maneuver"))
                     maneuver = stepsJSON.getJSONObject(i).getString("maneuver");
                 else maneuver = "";
-                stepsList.add(new Step(endLat, endLng, distance, maneuver));
+                stepsList.add(new Step(endLat, startLat, startLng, endLng, distance, maneuver));
             }
             listFull = true;
         }
         catch(JSONException e) {}
+    }
 
+    private void sendLatLngsToBluetooth(){
+        LinkedList<String> latLngList = new LinkedList<>();
+        for(Step s : stepsList) latLngList.add(s.getEndLat() + ", "
+                + s.getEndLat());
+        Intent intent = new Intent("LatLng");
+        intent.putExtra("LatLngList", latLngList);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 }

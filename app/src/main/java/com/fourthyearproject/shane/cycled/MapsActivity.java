@@ -28,7 +28,6 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -46,9 +45,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private GoogleMap mMap;
     GoogleApiClient googleApiClient;
-    private Marker marker;
-    private LatLng destinationLatLng;
-    private LatLng currentLatLng;
+    private LatLng destinationLatLng = null;
+    private LatLng currentLatLng = null;
     private boolean firstUpdate = true;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
     private boolean bluetoothConnected;
@@ -56,7 +54,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean bluetoothFailedToConnect;
     private boolean bluetoothScanning;
     private MenuItem bluetoothItem;
-    //private TextView distanceText;
     private boolean firstSelection = true;
     private Polyline polyline = null;
     private LinkedList<LatLng> waypointList = new LinkedList<>();
@@ -65,10 +62,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-
-        //distanceText = (TextView) findViewById(R.id.distance_text_view);
-        //distanceText.setTextSize(getResources().getDimension(R.dimen.text_size));
-        //distanceText.setTextColor(Color.RED);
 
         Toolbar myToolbar = (Toolbar) findViewById(R.id.maps_toolbar);
         setSupportActionBar(myToolbar);
@@ -106,7 +99,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     protected void onStop() {
         super.onStop();
-        if(null != marker) marker.remove();
         if(null != googleApiClient) googleApiClient.disconnect();
     }
 
@@ -154,8 +146,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             bluetoothLeServiceStartup();
         }
         else if (id == R.id.bicycle_icon)
-            gpsDestinationServiceStartup();
+            gpsServiceStartup();
+        else if (id == R.id.refresh_icon)
+            refreshPage();
         return super.onOptionsItemSelected(item);
+    }
+
+    private void refreshPage() {
+        if(null != polyline)
+            polyline.remove();
+        mMap.clear();
+        waypointList.clear();
+        destinationLatLng = null;
+        firstSelection = true;
+        polyline = null;
     }
 
     @Override
@@ -182,37 +186,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         googleApiClient.connect();
     }
 
-    private void gpsDestinationServiceStartup() {
-        MapsResultReceiver mapsResultReceiver = new MapsResultReceiver(null, this);
-        Intent gpsService = new Intent(this, GPSService.class);
-        gpsService.putExtra("resultReceiver", mapsResultReceiver);
-        String origin = currentLatLng.latitude + "," + currentLatLng.longitude;
-        String destination = destinationLatLng.latitude + "," + destinationLatLng.longitude;
-        String url = makeDirectionsURL(origin, destination);
-        gpsService.putExtra("URL", url);
-        Log.d(TAG, origin + ", " + destination);
-        startService(gpsService);
-    }
-
-    private String makeDirectionsURL(String origin, String destination) {
-        String url = "https://maps.googleapis.com/maps/api/directions/json?origin=" +
-                origin + "&destination=" + destination;
-        if(!waypointList.isEmpty()){
-            url = url + "&waypoints=optimize:true" +
-                    "via:" + Double.toString(waypointList.get(0).latitude) + "%2C" +
-                    Double.toString(waypointList.get(0).longitude);
-            for(int i = 1; i < waypointList.size(); i++){
-                url = url + "%7Cvia:" + Double.toString(waypointList.get(i).latitude) + "%2C" +
-                        Double.toString(waypointList.get(i).longitude);
-            }
-        }
-        return url + "&mode=bicycling";
-    }
-
     private void gpsServiceStartup() {
         MapsResultReceiver mapsResultReceiver = new MapsResultReceiver(null, this);
         Intent gpsService = new Intent(this, GPSService.class);
         gpsService.putExtra("resultReceiver", mapsResultReceiver);
+        if(destinationLatLng != null){
+            String origin = currentLatLng.latitude + "," + currentLatLng.longitude;
+            String destination = destinationLatLng.latitude + "," + destinationLatLng.longitude;
+            String url = new DirectionsURL().makeDirectionsURL(origin, destination, waypointList);
+            gpsService.putExtra("URL", url);
+            gpsService.putExtra("Destination", destination);
+        }
         startService(gpsService);
     }
 
@@ -222,10 +206,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
-                if(null != polyline) {
-                    Toast.makeText(getApplicationContext(),
-                            "polyline not null :)", Toast.LENGTH_SHORT).show();
-                }
                 processPlaceSelection(place.getLatLng());
             }
             @Override
@@ -238,7 +218,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void processPlaceSelection(LatLng latLng) {
         MarkerOptions markerOptions = new MarkerOptions().position(latLng);
-        marker = mMap.addMarker(markerOptions);
+        mMap.addMarker(markerOptions);
         if(firstSelection) {
             firstSelection = false;
             destinationLatLng = latLng;
@@ -262,7 +242,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
-    void onReceiveGPSUpdate(String la, String lo, String pol, String dir, String dis) {
+    void onReceiveGPSUpdate(String la, String lo, String pol, String dir) {
         double latitude = Double.parseDouble(la);
         double longitude = Double.parseDouble(lo);
         currentLatLng = new LatLng(latitude, longitude);
@@ -276,7 +256,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(null != dir && !"".equals(dir)) {
             updateUiDirection(dir);
         }
-        //distanceText.setText(dis + " " + dir);
     }
 
     @Override
@@ -288,15 +267,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             mMap.setMyLocationEnabled(true);
         }
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng latLng) {
+                processPlaceSelection(latLng);
+            }
+        });
     }
 
     void updateUiPolyline(String p) {
-        List<LatLng> polylineList = PolyUtil.decode(p);
-        polyline = mMap.addPolyline(new PolylineOptions()
-                .addAll(polylineList)
-                .width(6)
-                .color(ContextCompat.getColor(getApplicationContext(), R.color.sky))
-                .geodesic(true));
+            List<LatLng> polylineList = PolyUtil.decode(p);
+            polyline = mMap.addPolyline(new PolylineOptions()
+                    .addAll(polylineList)
+                    .width(6)
+                    .color(ContextCompat.getColor(getApplicationContext(), R.color.sky))
+                    .geodesic(true));
+
     }
 
     void updateUiDirection(String s) {
@@ -321,16 +307,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             updateUiBluetooth("Bluetooth Connected", null);
         } else if (null != resultData.getString("Disconnected")) {
             connectionStatus(false, true, false, false);
-            updateUiBluetooth("Bluetooth Disconnected", null);
+            //updateUiBluetooth("Bluetooth Disconnected", null);
         } else if (null != resultData.getString("Failed to Connect")) {
             connectionStatus(false, true, true, true);
-            updateUiBluetooth("Failed to Connect Bluetooth", null);
+            //updateUiBluetooth("Failed to Connect Bluetooth", null);
         } else if (null != resultData.getString("No device")) {
             connectionStatus(false, true, true, true);
-            updateUiBluetooth("No Bluetooth Device Present", null);
+            //updateUiBluetooth("No Bluetooth Device Present", null);
         } else if (null != resultData.getString("Scanning")) {
             connectionStatus(false, true, false, true);
-            updateUiBluetooth("Scanning for Bluetooth Device...", null);
+            //updateUiBluetooth("Scanning for Bluetooth Device...", null);
         }
     }
 
@@ -343,7 +329,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 else
                     bluetoothItem.setIcon(R.mipmap.ic_bluetooth_white_24dp);
                 if(bluetoothScanning)
-                    dialogBuilder("Scanning", "Scanning for device...", false, true);
+                    //dialogBuilder("Scanning", "Scanning for device...", false, true);
                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
             }
         });

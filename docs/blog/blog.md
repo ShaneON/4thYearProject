@@ -49,3 +49,11 @@ the whole system together but I expect it to all work together well.
 My next task is to test out the hardware accelerometer and GPS modules that come with the flora to see if they can be of use for my project.
 The GPS module will be very difficult to test properly as it can only be used outdoors with a clear view of the sky, which is unfortunately
 a big ask in Ireland.
+
+## My Eighth blog entry
+At the moment I am working on send the latitudes and longitudes as strings from the app to the arduino, and then converting them
+into floats for the next step where i will work on an algorithm to calculate the distance between two sets of lats and lngs.
+I have almost completed this task but I am having some trouble with the confirmation data sent back from the arduino. As when
+I send data to it, I wait for confirmation that it was received properly before I send the next data packet. I am encountering some
+problems where for some reason it stops letting me write to the arduino so I only get half of the array sent. I have not been able to work
+out why yet as it happens at seemingly random and unrelated times. I am hoping I can find a solution for it soon.

@@ -10,6 +10,7 @@ import android.os.IBinder;
 import android.os.ResultReceiver;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -24,6 +25,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -34,6 +36,7 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
 
     private LocationRequest locationRequest;
     private Location currentLocation;
+    private String destination;
     private GoogleApiClient googleApiClient;
     ResultReceiver resultReceiver;
     private String urlString;
@@ -42,8 +45,9 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
     private boolean routeDownloaded = false;
     private String direction = null;
     private boolean aboutToTurn;
-    private float distance = 0.0f;
     private int turnNum = 0;
+    private boolean newRoute = false;
+    private boolean routeSent = false;
 
     @Override // Function called when service is started from  activity
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -57,21 +61,16 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
                     .build();
         }
         googleApiClient.connect();
-
         resultReceiver = intent.getParcelableExtra("resultReceiver");
-        if(null != intent.getExtras().getString("URL"))
-        {
+
+        if(null != intent.getExtras().getString("URL")) {
             urlString = intent.getExtras().getString("URL");
+            destination = intent.getExtras().getString("Destination");
             Log.d(TAG, urlString + "in onStartCommand");
             getDirections();
         }
         step = 0;
         return super.onStartCommand(intent, flags, startId);
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
     }
 
     // Creates a new location request
@@ -138,7 +137,8 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
 
                 String directions = sb.toString();
                 routeDownloaded = true;
-                parser = new JSONParser(directions);
+                parser = new JSONParser(directions, getApplicationContext());
+                newRoute = true;
             }
             catch(MalformedURLException m) {}
             catch(IOException e) {}
@@ -165,44 +165,31 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
     }
 
     @Override
-    public void onConnectionFailed(ConnectionResult result) {
-        // An unresolvable error has occurred and a connection to Google APIs
-        // could not be established. Display an error message, or handle
-        // the failure silently
-        // ...
-    }
-
-    @Override
     public void onConnected(Bundle connectionHint) {
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
+        checkPermission();
         currentLocation = LocationServices.FusedLocationApi.getLastLocation(
                 googleApiClient);
         startLocationUpdates();
     }
+
     protected void startLocationUpdates() {
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
+        checkPermission();
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 googleApiClient, locationRequest, this);
     }
+
     @Override
     public void onLocationChanged(Location location) {
         currentLocation = location;
         if(!userOnRoute()) {
-            updateRouteURL();
+            urlString = getUpdatedRouteURL();
             getDirections();
         }
         if(routeDownloaded && parser.getListFull()){
-            distance = getDistanceToTurn();
-            String distanceString = "" + distance;
-            Log.d(TAG, distanceString);
+            if(!routeSent){
+                sendLatLngsToBluetoothService();
+                routeSent = true;
+            }
             if(getDistanceToTurn() < 30.0f && !aboutToTurn) {
                 lightUpTurnSignal();
                 aboutToTurn = true;
@@ -215,19 +202,37 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
         sendBundle();
     }
 
+    // Makes a new URL for an updated route to be requested
+    private String getUpdatedRouteURL() {
+        String origin = currentLocation.getLatitude() + "," + currentLocation.getLongitude();
+        String url = new DirectionsURL().makeDirectionsURL(origin, destination, null);
+        return url;
+    }
+
     // Checks if the user is still on the correct route
     private boolean userOnRoute() {
-
         return true;
     }
 
     // Light up the appropriate turn signal
     private void lightUpTurnSignal() {
         turnNum++;
-        Intent intent = new Intent("directions message");
+        Intent intent = new Intent("directions");
         direction = parser.getStepsList().get(step + 1).getManeuver() + " " + turnNum;
         //intent.putExtra("direction", direction);
         //LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+    private void sendLatLngsToBluetoothService(){
+        Intent intent = new Intent("directions message");
+        ArrayList<String> latLngList = new ArrayList<>();
+        for(int i = 0; i < parser.getStepsList().size(); i++){
+            latLngList.add("lat" + parser.getStepsList().get(i).getEndLat() + "," +
+                    "lng" + parser.getStepsList().get(i).getEndLng());
+        }
+        latLngList.add("end");
+        intent.putStringArrayListExtra("LatLng", latLngList);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     // Find the distance between the user and the next turn
@@ -244,33 +249,39 @@ public class GPSService extends Service implements GoogleApiClient.ConnectionCal
     private void sendBundle() {
         String polyline = null;
         Bundle locationBundle = new Bundle();
-        if(routeDownloaded && null != parser.getPolyline())
+        if(routeDownloaded && null != parser.getPolyline() && newRoute){
             polyline = parser.getPolyline();
-        String distanceFloat = "" + distance;
-        locationBundle.putString("latitude", Double.toString(currentLocation.getLatitude()));
-        locationBundle.putString("longitude", Double.toString(currentLocation.getLongitude()));
+            newRoute = false;
+        }
         locationBundle.putString("polyline", polyline);
         locationBundle.putString("direction", direction);
-        locationBundle.putString("distance", distanceFloat);
+        locationBundle.putString("latitude", Double.toString(currentLocation.getLatitude()));
+        locationBundle.putString("longitude", Double.toString(currentLocation.getLongitude()));
         resultReceiver.send(0, locationBundle);
         direction = "";
     }
 
-    // Makes a new URL for an updated route to be requested
-    private void updateRouteURL() {
-    }
+    @Override
+    public void onConnectionSuspended(int result) {}
 
     @Override
-    public void onConnectionSuspended(int result) {
-        // An unresolvable error has occurred and a connection to Google APIs
-        // could not be established. Display an error message, or handle
-        // the failure silently
-    }
+    public void onConnectionFailed(ConnectionResult result) {}
 
     @Nullable
     @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+    public IBinder onBind(Intent intent) {return null;}
+
+    private void checkPermission(){
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
+                android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
     }
 }
 
