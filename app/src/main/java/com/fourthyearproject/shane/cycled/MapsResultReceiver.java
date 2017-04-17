@@ -4,10 +4,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
 
-/**
- * Created by hp on 22/02/2017.
- */
-
 class MapsResultReceiver extends ResultReceiver
 {
     private static final String TAG = "MapsResultReceiver";

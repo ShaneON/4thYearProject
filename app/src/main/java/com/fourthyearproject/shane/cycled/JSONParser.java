@@ -10,11 +10,6 @@ import org.json.JSONObject;
 
 import java.util.LinkedList;
 
-
-/**
- * Created by hp on 14/02/2017.
- */
-
 public class JSONParser {
 
     private final String TAG = "JSONParser";
@@ -86,4 +81,13 @@ public class JSONParser {
         intent.putExtra("LatLngList", latLngList);
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
+/*
+    private void covertLatLngsToFloat(){
+        for(int i = 0; i < stepsList.size(); i++){
+            double doubleEndLat = Double.parseDouble(stepsList.get(i).getEndLat());
+            double doubleEndLng = Double.parseDouble(stepsList.get(i).getEndLng());
+
+        }
+    }
+*/
 }

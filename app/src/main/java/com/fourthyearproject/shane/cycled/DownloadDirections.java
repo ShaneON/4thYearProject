@@ -12,10 +12,6 @@ import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
 
-/**
- * Created by hp on 26/02/2017.
- */
-
 class DownloadDirections extends AsyncTask<URL, Integer, String> {
 
     private static final String TAG = "Download Directions";

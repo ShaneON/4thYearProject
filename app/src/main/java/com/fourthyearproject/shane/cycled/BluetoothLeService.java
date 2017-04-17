@@ -26,10 +26,8 @@ import android.util.Log;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-
-/**
- * Created by hp on 22/02/2017.
- */
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class BluetoothLeService extends Service {
     private static final String TAG = "BluetoothLeService";
@@ -41,12 +39,32 @@ public class BluetoothLeService extends Service {
     private Handler handler;
     private int currentState;
     private boolean scanning;
-    private String receivedValue = "";
     private UUIDS uuids;
     private ArrayList<String> latLngList = new ArrayList<>();
     private int currentLatLngListIndex = 0;
     private String currentDirection = null;
     private int directionCount = 0;
+    private Timer timer;
+
+    private TimerTask timerTask = new TimerTask() {
+        @Override
+        public void run() {
+            sendMessage("0");
+        }
+    };
+
+    public void startTimer() {
+        if(timer != null) {
+            return;
+        }
+        timer = new Timer();
+        timer.scheduleAtFixedRate(timerTask, 0, 2000);
+    }
+
+    public void stopTimer() {
+        timer.cancel();
+        timer = null;
+    }
 
     @Override // Function called when service is started from activity
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -57,12 +75,14 @@ public class BluetoothLeService extends Service {
         scanForDevices();
         LocalBroadcastManager.getInstance(this).registerReceiver(directionsReceiver,
                 new IntentFilter("directions message"));
+        startTimer();
         return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
     public void onDestroy() {
         stopConnection();
+        stopTimer();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(directionsReceiver);
         super.onDestroy();
     }
@@ -210,7 +230,7 @@ public class BluetoothLeService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
-            receivedValue = characteristic.getStringValue(0);
+            String receivedValue = characteristic.getStringValue(0);
             Log.d(TAG, "Received: " + receivedValue);
             if(receivedValue.equals(latLngList.get(currentLatLngListIndex)) &&
                     currentLatLngListIndex < latLngList.size() - 1) {

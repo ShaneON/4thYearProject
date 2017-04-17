@@ -2,10 +2,6 @@ package com.fourthyearproject.shane.cycled;
 
 import java.util.UUID;
 
-/**
- * Created by hp on 26/03/2017.
- */
-
 public class UUIDS {
     // UUIDs for UAT service and associated characteristics.
     private UUID UART_UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");

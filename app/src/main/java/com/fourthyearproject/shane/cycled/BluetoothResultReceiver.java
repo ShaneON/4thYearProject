@@ -4,11 +4,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
 
-/**
- * Created by hp on 22/02/2017.
- */
-
-
 class BluetoothResultReceiver extends ResultReceiver
 {
     private MapsActivity maps;

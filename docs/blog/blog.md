@@ -50,10 +50,20 @@ My next task is to test out the hardware accelerometer and GPS modules that come
 The GPS module will be very difficult to test properly as it can only be used outdoors with a clear view of the sky, which is unfortunately
 a big ask in Ireland.
 
-## My Eighth blog entry
+## My Eighth Blog Entry
 At the moment I am working on send the latitudes and longitudes as strings from the app to the arduino, and then converting them
 into floats for the next step where i will work on an algorithm to calculate the distance between two sets of lats and lngs.
 I have almost completed this task but I am having some trouble with the confirmation data sent back from the arduino. As when
 I send data to it, I wait for confirmation that it was received properly before I send the next data packet. I am encountering some
 problems where for some reason it stops letting me write to the arduino so I only get half of the array sent. I have not been able to work
 out why yet as it happens at seemingly random and unrelated times. I am hoping I can find a solution for it soon.
+
+## My Ninth Blog Entry
+I have gotten all the constituent parts ready to put together for the final stage of my product. The flora's GPS is getting accurate
+readings, my distance algorithm works, I can transfer a full array of latitudes and longitudes along with the direction (left or right)
+over bluetooth, and I think I have interrupts working on the flora too which I think may be an important part of my design.
+Today I am going to create a data flow/UML type diagram to assist me in the construction of my arduino program, as it has become
+a little too complicated with the interrupts and different functionality between the tethered and untethered system. I feel putting
+a little extra concentration into design will really benefit me in this part of the project.
+I hope to be have a something close to the final product by the end of this week so that I can move on to completing my documentation
+ and testing.

@@ -1,9 +1,5 @@
 package com.fourthyearproject.shane.cycled;
 
-/**
- * Created by hp on 14/02/2017.
- */
-
 public class Step {
 
     private String endLat;
