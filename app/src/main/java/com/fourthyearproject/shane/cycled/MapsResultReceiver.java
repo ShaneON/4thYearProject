@@ -18,6 +18,7 @@ class MapsResultReceiver extends ResultReceiver
     @Override
     protected void onReceiveResult(int resultCode, Bundle resultData) {
         maps.onReceiveGPSUpdate(resultData.getString("latitude"), resultData.getString("longitude"),
-                                resultData.getString("polyline"), resultData.getString("direction"));
+                                resultData.getString("polyline"), resultData.getString("direction")
+                                ,resultData.getString("direction"));
     }
 }

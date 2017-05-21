@@ -57,12 +57,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean firstSelection = true;
     private Polyline polyline = null;
     private LinkedList<LatLng> waypointList = new LinkedList<>();
+    //private TextView tv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-
+        //tv = (TextView) findViewById(R.id.distance_text_view);
         Toolbar myToolbar = (Toolbar) findViewById(R.id.maps_toolbar);
         setSupportActionBar(myToolbar);
     }
@@ -200,6 +201,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         startService(gpsService);
     }
 
+
     private void directionsSetup() {
         PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
                 getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
@@ -242,10 +244,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
-    void onReceiveGPSUpdate(String la, String lo, String pol, String dir) {
+    void onReceiveGPSUpdate(String la, String lo, String pol, String dir, String dis) {
         double latitude = Double.parseDouble(la);
         double longitude = Double.parseDouble(lo);
         currentLatLng = new LatLng(latitude, longitude);
+
         if(firstUpdate) {
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 12.0f));
             firstUpdate = false;
@@ -253,9 +256,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(null != pol) {
             updateUiPolyline(pol);
         }
+        /*
         if(null != dir && !"".equals(dir)) {
             updateUiDirection(dir);
         }
+        if(null != dis && !"".equals(dis)) {
+            updateUiDirection(dis);
+        }
+        */
     }
 
     @Override
@@ -284,16 +292,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     .geodesic(true));
 
     }
-
+/*
     void updateUiDirection(String s) {
         final String message = s;
         this.runOnUiThread(new Runnable() {
             public void run() {
+                tv.setText(message);
                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
             }
         });
     }
-
+*/
     private void bluetoothLeServiceStartup() {
         BluetoothResultReceiver bluetoothResultReceiver = new BluetoothResultReceiver(null, this);
         Intent bluetoothLeService = new Intent(this, BluetoothLeService.class);

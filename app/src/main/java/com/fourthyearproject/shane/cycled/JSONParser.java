@@ -1,9 +1,5 @@
 package com.fourthyearproject.shane.cycled;
 
-import android.content.Context;
-import android.content.Intent;
-import android.support.v4.content.LocalBroadcastManager;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,14 +14,11 @@ public class JSONParser {
     private LinkedList<Step> stepsList;
     private boolean listFull = false;
     private String polyline;
-    private Context context;
 
-    public JSONParser(String json, Context context) {
+    public JSONParser(String json) {
         try {
             jsonDirectionsObject = new JSONObject(json);
-            this.context = context;
             parseJSON();
-            sendLatLngsToBluetooth();
         }
         catch(JSONException e){}
 
@@ -52,7 +45,6 @@ public class JSONParser {
             stepsList = new LinkedList<>();
             JSONArray routesJSON = jsonDirectionsObject.getJSONArray("routes");
             JSONArray legsJSON = routesJSON.getJSONObject(0).getJSONArray("legs");
-            JSONObject journeyDetailsJSON = legsJSON.getJSONObject(0);
             JSONArray stepsJSON = legsJSON.getJSONObject(0).getJSONArray("steps");
             polyline = routesJSON.getJSONObject(0).getJSONObject("overview_polyline").getString("points");
 
@@ -65,7 +57,7 @@ public class JSONParser {
                 String maneuver;
                 if(stepsJSON.getJSONObject(i).has("maneuver"))
                     maneuver = stepsJSON.getJSONObject(i).getString("maneuver");
-                else maneuver = "";
+                else maneuver = "n/a";
                 stepsList.add(new Step(endLat, startLat, startLng, endLng, distance, maneuver));
             }
             listFull = true;
@@ -73,21 +65,4 @@ public class JSONParser {
         catch(JSONException e) {}
     }
 
-    private void sendLatLngsToBluetooth(){
-        LinkedList<String> latLngList = new LinkedList<>();
-        for(Step s : stepsList) latLngList.add(s.getEndLat() + ", "
-                + s.getEndLat());
-        Intent intent = new Intent("LatLng");
-        intent.putExtra("LatLngList", latLngList);
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
-    }
-/*
-    private void covertLatLngsToFloat(){
-        for(int i = 0; i < stepsList.size(); i++){
-            double doubleEndLat = Double.parseDouble(stepsList.get(i).getEndLat());
-            double doubleEndLng = Double.parseDouble(stepsList.get(i).getEndLng());
-
-        }
-    }
-*/
 }

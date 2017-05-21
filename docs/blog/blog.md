@@ -66,4 +66,9 @@ Today I am going to create a data flow/UML type diagram to assist me in the cons
 a little too complicated with the interrupts and different functionality between the tethered and untethered system. I feel putting
 a little extra concentration into design will really benefit me in this part of the project.
 I hope to be have a something close to the final product by the end of this week so that I can move on to completing my documentation
- and testing.
+and testing.
+
+##Tenth blog entry
+My project is now functioning and most testing has been done but there is more to do. I also have some documentation written but have
+more to do today, tomorrow and monday. I also still have to film the video walkthrough which will probably happen tomorrow morning when
+there are less care on the road, assuming it not raining.

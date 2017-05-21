@@ -25,7 +25,8 @@
 
         <activity
             android:name=".MapsActivity"
-            android:label="CycLED">
+            android:label="CycLED"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -12,6 +12,15 @@
     </item>
     <item
         is-multidex="true"
+        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\incremental-runtime-classes\debug\instant-run.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.2"
+        sha1="efe219dcb3a94ad5540a715a6babf79b682771c8">
+        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\instant-run_62c021911f90327fad5673f081da733262b75d71\classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
         jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.google.maps.android\android-maps-utils\0.5\jars\classes.jar"
         jumboMode="true"
         optimize="true"
@@ -39,12 +48,30 @@
     </item>
     <item
         is-multidex="true"
+        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.android.support\appcompat-v7\23.4.0\jars\classes.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.2"
+        sha1="548f06de403a9409f00554b3ee12a9fdea0e236c">
+        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.android.support-appcompat-v7-23.4.0_174377a61a78d86fdee202a71e288d381ea37fd7\classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
         jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.google.android.gms\play-services-maps\10.0.1\jars\classes.jar"
         jumboMode="true"
         optimize="true"
         revision="23.0.2"
         sha1="27777b3cad3c20b1acab19f6e37fe3e03371bf6e">
         <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.google.android.gms-play-services-maps-10.0.1_3bed65816116f110ba383360c39985a87c9d37fe\classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.android.support\animated-vector-drawable\23.4.0\jars\classes.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.2"
+        sha1="de4db3785756bfb0915a9f59a9b3f2fea7407be4">
+        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.android.support-animated-vector-drawable-23.4.0_71e487f122cfb2c159d9038357aca238aee973cc\classes.dex" />
     </item>
     <item
         is-multidex="true"
@@ -57,12 +84,30 @@
     </item>
     <item
         is-multidex="true"
+        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.google.android.gms\play-services-tasks\10.0.1\jars\classes.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.2"
+        sha1="6addaba208e21c6da776d0ca75b6b23a6ccd5499">
+        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.google.android.gms-play-services-tasks-10.0.1_b128ea0611bd963c45a2644e0062cda455c36279\classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
         jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.android.support\support-v4\24.0.0\jars\classes.jar"
         jumboMode="true"
         optimize="true"
         revision="23.0.2"
         sha1="2f7e6e2dad1bccaf68a8820820adc6c0d5b96d37">
         <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.android.support-support-v4-24.0.0_8aab2cfb841d449f2f5a6b4e144f2e9ff2bf480b\classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.android.support\recyclerview-v7\23.4.0\jars\classes.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.2"
+        sha1="ec75036c3c52e451d0cde50a5aedaf5fd32354a0">
+        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.android.support-recyclerview-v7-23.4.0_1609e8dc7ae5f0fc9cd76be8d1202001259aa340\classes.dex" />
     </item>
     <item
         is-multidex="true"
@@ -84,60 +129,6 @@
     </item>
     <item
         is-multidex="true"
-        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.google.android.gms\play-services-base\10.0.1\jars\classes.jar"
-        jumboMode="true"
-        optimize="true"
-        revision="23.0.2"
-        sha1="25438f55fc6d906a0e72f30b21487541430ede43">
-        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.google.android.gms-play-services-base-10.0.1_c461d8d8b464271f5f51cbbba3fba9ed90ee2c99\classes.dex" />
-    </item>
-    <item
-        is-multidex="true"
-        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\incremental-runtime-classes\debug\instant-run.jar"
-        jumboMode="true"
-        optimize="true"
-        revision="23.0.2"
-        sha1="2ffc85373385fab43271aa3b3798efb9b059b270">
-        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\instant-run_62c021911f90327fad5673f081da733262b75d71\classes.dex" />
-    </item>
-    <item
-        is-multidex="true"
-        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.android.support\appcompat-v7\23.4.0\jars\classes.jar"
-        jumboMode="true"
-        optimize="true"
-        revision="23.0.2"
-        sha1="548f06de403a9409f00554b3ee12a9fdea0e236c">
-        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.android.support-appcompat-v7-23.4.0_174377a61a78d86fdee202a71e288d381ea37fd7\classes.dex" />
-    </item>
-    <item
-        is-multidex="true"
-        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.android.support\animated-vector-drawable\23.4.0\jars\classes.jar"
-        jumboMode="true"
-        optimize="true"
-        revision="23.0.2"
-        sha1="de4db3785756bfb0915a9f59a9b3f2fea7407be4">
-        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.android.support-animated-vector-drawable-23.4.0_71e487f122cfb2c159d9038357aca238aee973cc\classes.dex" />
-    </item>
-    <item
-        is-multidex="true"
-        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.google.android.gms\play-services-tasks\10.0.1\jars\classes.jar"
-        jumboMode="true"
-        optimize="true"
-        revision="23.0.2"
-        sha1="6addaba208e21c6da776d0ca75b6b23a6ccd5499">
-        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.google.android.gms-play-services-tasks-10.0.1_b128ea0611bd963c45a2644e0062cda455c36279\classes.dex" />
-    </item>
-    <item
-        is-multidex="true"
-        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.android.support\recyclerview-v7\23.4.0\jars\classes.jar"
-        jumboMode="true"
-        optimize="true"
-        revision="23.0.2"
-        sha1="ec75036c3c52e451d0cde50a5aedaf5fd32354a0">
-        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.android.support-recyclerview-v7-23.4.0_1609e8dc7ae5f0fc9cd76be8d1202001259aa340\classes.dex" />
-    </item>
-    <item
-        is-multidex="true"
         jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.android.support\design\23.4.0\jars\classes.jar"
         jumboMode="true"
         optimize="true"
@@ -151,8 +142,17 @@
         jumboMode="true"
         optimize="true"
         revision="23.0.2"
-        sha1="9ebb763f9ba9860a768413f6f0305ccb2241030f">
+        sha1="a125599d1bd6ce02904cb2b0af204d81fa952e4d">
         <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\instant-run-bootstrap_4bde77a13ace73a3d6c1781f10ce5e9824c14672\classes.dex" />
+    </item>
+    <item
+        is-multidex="true"
+        jar="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\exploded-aar\com.google.android.gms\play-services-base\10.0.1\jars\classes.jar"
+        jumboMode="true"
+        optimize="true"
+        revision="23.0.2"
+        sha1="25438f55fc6d906a0e72f30b21487541430ede43">
+        <dex dex="C:\Users\hp\AndroidStudioProjects\CycLED\app\build\intermediates\transforms\dex\debug\folders\1000\10\com.google.android.gms-play-services-base-10.0.1_c461d8d8b464271f5f51cbbba3fba9ed90ee2c99\classes.dex" />
     </item>
 
 </items>

@@ -18,8 +18,8 @@
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
     />
-
-    <!--<TextView
+<!--
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:id="@+id/distance_text_view"

@@ -26,8 +26,6 @@ import android.util.Log;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class BluetoothLeService extends Service {
     private static final String TAG = "BluetoothLeService";
@@ -35,15 +33,17 @@ public class BluetoothLeService extends Service {
     private BluetoothGatt gatt;
     private BluetoothGattCharacteristic tx;
     private BluetoothGattCharacteristic rx;
-    ResultReceiver resultReceiver;
+    private ResultReceiver resultReceiver;
     private Handler handler;
     private int currentState;
     private boolean scanning;
     private UUIDS uuids;
-    private ArrayList<String> latLngList = new ArrayList<>();
+    private ArrayList<String> latLngTurnsList;
     private int currentLatLngListIndex = 0;
     private String currentDirection = null;
-    private int directionCount = 0;
+    //private int directionCount = 0;
+
+    /*
     private Timer timer;
 
     private TimerTask timerTask = new TimerTask() {
@@ -54,9 +54,7 @@ public class BluetoothLeService extends Service {
     };
 
     public void startTimer() {
-        if(timer != null) {
-            return;
-        }
+        if(timer != null) return;
         timer = new Timer();
         timer.scheduleAtFixedRate(timerTask, 0, 2000);
     }
@@ -65,96 +63,90 @@ public class BluetoothLeService extends Service {
         timer.cancel();
         timer = null;
     }
-
+    */
     @Override // Function called when service is started from activity
     public int onStartCommand(Intent intent, int flags, int startId) {
         adapter = BluetoothAdapter.getDefaultAdapter();
         handler = new Handler();
         resultReceiver = intent.getParcelableExtra("resultReceiver");
         uuids = new UUIDS();
+        //Scan for Bluetooth devices
         scanForDevices();
+
+        //Register the LocalBroadcastManager receiver, that receives data from
+        //the GPS service
         LocalBroadcastManager.getInstance(this).registerReceiver(directionsReceiver,
-                new IntentFilter("directions message"));
-        startTimer();
+                new IntentFilter("GPS to Bluetooth"));
         return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
     public void onDestroy() {
         stopConnection();
-        stopTimer();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(directionsReceiver);
         super.onDestroy();
     }
 
+    //Broadcast receiver class that receives directions and the waypoints array
     private BroadcastReceiver directionsReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if(null != intent.getExtras().getString("direction"))
-                sendDirection(intent);
+
+            //If the message is a direction, call the sendDirection method
+            //and send it the intent
+            if(null != intent.getStringExtra("direction")) {
+                String direction = intent.getStringExtra("direction");
+                Log.d(TAG, "=======================In on receive in bluetooth and dir is " + direction);
+                sendDirection(direction);
+            }
+            //If the message is a list of waypoints
             else if(null != intent.getExtras().getStringArrayList("LatLng")) {
-                ArrayList<String> latLngTogetherList = intent.getExtras().getStringArrayList("LatLng");
-                createFinalLatLngList(latLngTogetherList);
-                sendMessage(latLngList.get(currentLatLngListIndex));
+                Log.d(TAG, "=======================In on receive in bluetooth waypoints");
+                latLngTurnsList = intent.getExtras().getStringArrayList("LatLng");
+
+                //This initiates the sending of waypoints in the list, the zeroth
+                //item is sent, and the program waits for confirmation from the arduino
+                //in callback.onCharacteristicChanged() to send the next item in the list
+                sendMessage(latLngTurnsList.get(0));
             }
         }
     };
+    /*
+        //Choose which direction to send to sendMessage(String string)
+        private void sendDirection(String direction){
 
-    private void createFinalLatLngList(ArrayList<String> latLngTogetherList) {
-        for(int i = 0; i < latLngTogetherList.size(); i++){
-            String [] latLngArray;
-            if(!"end".equals(latLngTogetherList.get(i))) {
-                latLngArray = seperateLatLng(removeSpaces(latLngTogetherList.get(i)));
-                Log.d(TAG, "The lat is " + latLngArray[0] + " and the lng is " + latLngArray[1]);
-                latLngList.add(latLngArray[0]);
-                latLngList.add(latLngArray[1]);
+            Bundle bluetoothBundle = new Bundle();
+            bluetoothBundle.putString("direction", direction);
+            resultReceiver.send(0, bluetoothBundle);
+            if("turn-left".equals(direction)) {
+                currentDirection = "lft" + directionCount;
+                directionCount++;
+                sendMessage(currentDirection);
             }
-            else latLngList.add(latLngTogetherList.get(i));
+            else if("turn-right".equals(direction)) {
+                currentDirection = "rgt" + directionCount;
+                directionCount++;
+                sendMessage(currentDirection);
+            }
+            else if("n/a".equals(direction)) {
+                currentDirection = "n/a" + directionCount;
+                directionCount++;
+                sendMessage(currentDirection);
+            }
+            else if("off".equals(direction)) {
+                sendMessage("off");
+            }
         }
+    */
+    //Choose which direction to send to sendMessage(String string)
+    private void sendDirection(String direction) {
+        if ("turn-left".equals(direction)) currentDirection = "lft";
+        else if("turn-right".equals(direction)) currentDirection = "rgt";
+        else if("n/a".equals(direction)) currentDirection = "n/a";
+        else if("off".equals(direction)) currentDirection = "off";
+        else if("finish".equals(direction)) currentDirection = "fin";
+        sendMessage(currentDirection);
     }
-
-    private void sendDirection(Intent intent){
-        Bundle bluetoothBundle = new Bundle();
-        String direction = intent.getExtras().getString("direction");
-        Log.d(TAG, direction);
-        bluetoothBundle.putString("direction", direction);
-        resultReceiver.send(0, bluetoothBundle);
-        if("turn-left".equals(direction)) {
-            currentDirection = "lft" + directionCount;
-            directionCount++;
-            sendMessage(currentDirection);
-        }
-        else if("turn-right".equals(direction)) {
-            currentDirection = "rgt" + directionCount;
-            directionCount++;
-            sendMessage(currentDirection);
-        }
-    }
-
-    private String [] seperateLatLng(String latLngString){
-        String [] latLngArray;
-        int commaIndex = latLngString.indexOf(',');
-        int lngLength = latLngString.substring(commaIndex + 1).length();
-        if(commaIndex <= 13 && lngLength <= 13)
-            latLngArray = getLatLngSubstring(0, commaIndex, commaIndex + 1, latLngString.length(), latLngString);
-        else if(commaIndex <= 13 && lngLength > 13)
-            latLngArray = getLatLngSubstring(0, commaIndex, commaIndex + 1, commaIndex + 13, latLngString);
-        else if(commaIndex > 13 && lngLength <= 13)
-            latLngArray = getLatLngSubstring(0, 13, commaIndex + 1, latLngString.length(), latLngString);
-        else
-            latLngArray =  getLatLngSubstring(0, 13, commaIndex + 1, commaIndex + 13, latLngString);
-        return latLngArray;
-    }
-
-    private String [] getLatLngSubstring(int startOne, int endOne, int startTwo, int endTwo,
-                                 String latLngString){
-        String [] latLngArray = new String[2];
-        latLngArray[0] = latLngString.substring(startOne, endOne);
-        latLngArray[1] = latLngString.substring(startTwo, endTwo);
-        return latLngArray;
-    }
-
-    private String removeSpaces(String latLngs){ return latLngs.replaceAll("\\s+",""); }
 
     void scanForDevices() {
         final BluetoothLeScanner bluetoothLeScanner = adapter.getBluetoothLeScanner();
@@ -173,7 +165,6 @@ public class BluetoothLeService extends Service {
         scanning = true;
         bluetoothLeScanner.startScan(leScanCallback);
     }
-
     // Main BTLE device callback where much of the logic occurs.
     private BluetoothGattCallback callback = new BluetoothGattCallback() {
         // Called whenever the device connection state changes, i.e. from disconnected to connected.
@@ -183,7 +174,6 @@ public class BluetoothLeService extends Service {
             Bundle bluetoothBundle = new Bundle();
             currentState = newState;
             if (newState == BluetoothGatt.STATE_CONNECTED) {
-
                 if (!gatt.discoverServices()) {
                     Log.d(TAG, "Failed to Connect");
                     bluetoothBundle.putString("Failed to Connect", "Failed to Connect");
@@ -230,21 +220,17 @@ public class BluetoothLeService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
+            //Get the data sent from the arduino
             String receivedValue = characteristic.getStringValue(0);
             Log.d(TAG, "Received: " + receivedValue);
-            if(receivedValue.equals(latLngList.get(currentLatLngListIndex)) &&
-                    currentLatLngListIndex < latLngList.size() - 1) {
-                sendMessage(latLngList.get(++currentLatLngListIndex));
-                Log.d(TAG, "Successful");
-            }
-            /*else if(!receivedValue.equals(currentDirection) && (receivedValue.charAt(0) == 'r'
-                            || receivedValue.charAt(1) == 'f')) {
-                sendMessage(currentDirection);
-            }*/
-            else if(currentLatLngListIndex < latLngList.size() - 1){
-                Log.d(TAG, "unsuccessful");
-                sendMessage(latLngList.get(currentLatLngListIndex));
-            }
+            Log.d(TAG, "");
+            Log.d(TAG, "------------------------------------------------------------------");
+            Log.d(TAG, "");
+            //This is for sending the array of waypoints, it waits for a zero from the arduino
+            //before sending the next waypoint
+            if(receivedValue.equals("0") && currentLatLngListIndex < latLngTurnsList.size() - 1)
+                //Send the next waypoint in the list
+                sendMessage(latLngTurnsList.get(++currentLatLngListIndex));
         }
     };
 
@@ -254,13 +240,15 @@ public class BluetoothLeService extends Service {
             super.onScanResult(callbackType, result);
             final BluetoothLeScanner bluetoothLeScanner = adapter.getBluetoothLeScanner();
             BluetoothDevice device = result.getDevice();
-            //mainActivity.writeLine("Found device: " + device.getAddress());
-
+            //If the UUIDs are not null
             if(null != result.getScanRecord().getServiceUuids()) {
+                //Add UUIDs to a list
                 List<ParcelUuid> parcelUuidList = result.getScanRecord().getServiceUuids();
-
+                //Iterate through the list
                 for (ParcelUuid u : parcelUuidList) {
+                    //If the UUID is equal to the Uart UUID from the UUID class
                     if (uuids.getUartUuid().toString().equals(u.getUuid().toString())) {
+                        //Stop scanning
                         bluetoothLeScanner.stopScan(leScanCallback);
                         // Connect to the device.
                         // Control flow will now go to the callback functions when BTLE events occur.
@@ -294,18 +282,14 @@ public class BluetoothLeService extends Service {
     }
 
     void sendMessage(String message) {
+        //If there's no tx signal, exit function
         if (tx == null) return;
         // Update TX characteristic value.
         tx.setValue(message.getBytes(Charset.forName("UTF-8")));
-        if (gatt.writeCharacteristic(tx)) Log.d(TAG, "Sent: " + message);
-       /* else if(message.charAt(1) == 'e' || message.charAt(0) == 'r') {
-            Log.d(TAG, "Couldn't write message: " + message);
-            sendMessage(currentDirection);
-        }*/
-        else {
-            Log.d(TAG, "Couldn't write message: " + message);
-            sendMessage(latLngList.get(currentLatLngListIndex));
-        }
+        //Send the message
+        if (gatt.writeCharacteristic(tx))
+            Log.d(TAG, "Sent: " + message);
+        else Log.d(TAG, "Couldn't write message: " + message);
     }
 
     @Nullable
